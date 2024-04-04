@@ -43,7 +43,7 @@
 % Modified on 2015-02-18 by A.J. Riggs from hcil_model.m to hcil_simTestbed.m to include
 %  extra errors in the model to simulate the actual testbed for fake images.
 
-function [Eout, varargout] = model_full_Fourier_target_opd_amp(mp, lambda, Ein, normFac)
+function [Eout, varargout] = model_full_Fourier_dm1_wfc(mp, lambda, Ein, normFac)
 
 mirrorFac = 2; % Phase change is twice the DM surface height.
 NdmPad = mp.full.NdmPad;
@@ -69,10 +69,33 @@ end
 % Masks and DM surfaces
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 np   = 512/2;
+indx = mp.wfc.indx;
+nwfc = 20;
+ma = mp.dm1.Nact;
+ma2 = ma * ma;
+du0 = zeros(ma2,1);
 
-maskopd = abs(pad(mp.P1.full.mask,np)) > 0;
+maskopd = abs(pad(mp.P1.full.mask,np));
+
+ndm1 = length(mp.wfc.km1);
+ndm2 = length(mp.wfc.km2);
+ndm  = ndm1 + ndm2;
+
+t1 = clock;
+tsum = 0;
+
+clear dm1x dm2x opdx ampx
+rms_opd = [];
+rms_amp = [];
+dmrms = [];
+dmsum = 0;
+
+dm1 = mp.dm1.V;
+dm2 = mp.dm2.V;
 
 % ---------------------------------------
+
+for jj = 1:nwfc+1
 
 if(any(mp.dm_ind==1));  DM1surf = falco_gen_dm_surf(mp.dm1,mp.dm1.dx,NdmPad); end
 if(any(mp.dm_ind==2));  DM2surf = falco_gen_dm_surf(mp.dm2,mp.dm2.dx,NdmPad); else; DM2surf=zeros(NdmPad); end
@@ -120,62 +143,82 @@ if( mp.d_P2_dm1 + mp.d_dm1_dm2 == 0 ); EP2eff = Edm2; else; EP2eff = propcustom_
 %--Re-image to pupil P3
 EP3 = propcustom_relay(EP2eff,mp.Nrelay2to3,mp.centering);
 
-%if lambda == 500e-9
-
     ce = pad(EP3,np);
-    %ce = EP3; maskopd = 1;
-    opd_target = maskopd .* (1e9 * atan2(imag(ce),real(ce)) * lambda / 2 / pi);
-    amp_target = abs(ce) .* maskopd;
-    ce_target = ce;
+    cer = ce ./ (mp.wfc.ce_target + eps);
+    pha_nm = 1e9 * atan2(imag(cer),real(cer)) * lambda / 2 / pi;
+    %pha_nm = real(pha_nm);
+    %opd = (pha_nm  - mp.wfc.opd_target*0) .* maskopd; %mp.wfc.maskopd;
+    opd = pha_nm .* maskopd; %mp.wfc.maskopd;
+    amp = (abs(ce) - mp.wfc.amp_target) .* maskopd;
 
-    idd = 'pre'
+    opdx(:,:,jj) = opd; % pre-wfc
+    ampx(:,:,jj) = amp; % pre-wfc
+    dm1x(:,:,jj) = mp.dm1.V; 
+    dm2x         = mp.dm2.V;
 
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/paper_opd_amp opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gray_gap08_wfe00_bw00_500nm opd_target amp_target ce_target 
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/pre_efc_flat_opd_amp_gray_gap08_wfe30_1lam_1500nm opd_target amp_target ce_target
+    rmsi = stat2d(opd)
 
-%end    
+    rms_opd = [rms_opd; rmsi];
+    rms_amp = [rms_amp; stat2d(amp)];
+    dmrms = [dmrms; stat2d(dmsum)];
 
-    %opd_nm_distorted = opd_target; 
-    %amp_distorted    = amp_target;
-    %ce_distorted = ce;
-
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm_1064nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm_1550nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm_500nm_distorted opd_nm_distorted amp_distorted
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_1550nm_4if opd_target amp_target maskopd
-
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw05_1064nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_355nm_flat opd_target amp_target
-    %save
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_500nm_post_efc opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_355nm_flat opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/distorted_opd_amp_bb_30nm_bw20_355nm_flat opd_nm_distorted amp_distorted ce_distorted
+    %opd1= (pha_nm  - mp.wfc.opd_target*0) .* maskopd; %mp.wfc.maskopd;
     
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/target_opd_amp_bb_00nm_bw20_500nm_fac0p5_gray24 opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/target_opd_amp_bb_00nm_bw20_1500nm_gray08_opd_owa20 opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/post_efc_opd_amp_30nm_bw20_1500nm_gray08_owa12_big opd_target amp_target ce_target
-    %load ~esidick/Afalco/falco20200916/macos/maps_psd/post_efc_opd_amp_30nm_bw20_500nm_gray08_owa12_big opd_target amp_target ce_target
+    %disp('paused'), pause(30)
 
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_355nm opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_500nm_post_efc opd_target amp_target ce_target
-    amp = amp_target;
-    opd = opd_target;
-    cef = ce_target;
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_500nm_post_efc_dm_drift_1000pm opd amp cef
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc_no_ota opd amp cef
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc_no_ota opd_target amp_target ce_target
-    save ~esidick/Afalco/falco20200916/macos/IFhex_opd/target_opd_amp_gap08_opd1_27nm_bw20_1500nm_post_efc opd_target amp_target ce_target
+    dw = m2v(opd, indx);
+    %[ws, hs] = sort(abs(dw), 'descend');
+    %kk = find(abs(dw) >= ws(5));
+    %dw(kk) = sign(dw(kk)) * ws(5);
+    %da = m2v(amp, indx);
+    %dw = [dw(:); da(:)];
+    ddu =  -mp.wfc.G * dw;
 
-    %pha = opd_target * 2 * pi * 1e-9/ lambda;
-    %EP3 = amp_target .* exp(1i*pha);
+    du1 = du0;
+    du1(mp.wfc.km1) = ddu(1:ndm1);
 
-    %aa = opd_target; rms0 = stat2d(aa); cx = rms0(1)*3*[-1 1];
-    %figure(13), clf
-        %imagesc(aa,cx); axis xy image, colormap(jet);  colorbar
-        %title(sprintf('target-opd-355: rms = %0.2f, pv = %0.1fnm', rms0));
-   %print -dpng ~esidick/Afalco/falco20200916/Figs/fig_opd1
+    %du2 = du0;
+    %du2(mp.wfc.km2) = ddu(ndm1+1:ndm);
+
+    del_dm1 = reshape(du1, ma, ma);
+    del_dm1 = del_dm1';
+
+    dmsum = dmsum + del_dm1;
+
+    %del_dm2 = reshape(du2, ma, ma);
+    %del_dm2 = del_dm2';
+
+    dm1 = dm1 + del_dm1;
+    mp.dm1.V = dm1;
+
+    %dm2 = dm2 + del_dm2;
+    %mp.dm2.V = dm2;
+
+    %figure(10), clf, plot(rmsx(:,1), 'ro-'), grid, drawnow
+
+    delt = etime(clock, t1);
+    t1   = clock;
+    tsum = tsum + delt;
+    count = [jj nwfc+1 round(delt) round(tsum)]
+
+end % nwfc - loop
+
+    %save('~esidick/Afalco/falco20200916/macos/dat_dm_err/wfc_dmx_opdx_08nm dmx dm1x dm2x opdx opd_in
+    %save(mp.wfc.fn, 'dm1x', 'opdx', 'ampx', 'rmsx', 'dmrms') % pre-7/26/23
+    save(mp.wfc.fn, 'dm1x', 'dm2x', 'opdx', 'ampx', 'rms_opd', 'rms_amp', 'dmrms')
+
+    %save ~esidick/Afalco/falco20200916/macos/dat_dm_err/test_opd opd
+    %figure(1), clf, imagesc(pha_nm), axis xy image, colormap(jet), niceaxes,  colorbar, drawnow, print -dpng ../Figs/fig_opd1
+    %figure(2), clf, imagesc(mp.wfc.opd_target), axis xy image, colormap(jet), niceaxes,  colorbar, drawnow, print -dpng ../Figs/fig_opd2
+    
+    
+% ======================================================================
+
+%save /home/esidick/2023_6mst/macos/dat/falco_efield_ep3 EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_no_dm EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_with_dm_v2 EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_no_error EP3
+% ======================================================================
 
 %--Apply the apodizer mask (if there is one)
 if(mp.flagApod)

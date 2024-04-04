@@ -1,4 +1,4 @@
-% Copyright 2024, by the California Institute of Technology. ALL RIGHTS
+% Copyright 2018, by the California Institute of Technology. ALL RIGHTS
 % RESERVED. United States Government Sponsorship acknowledged. Any
 % commercial use must be negotiated with the Office of Technology Transfer
 % at the California Institute of Technology.
@@ -113,13 +113,13 @@ Edm1_save = Edm1;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %--Define pupil P1 and Propagate to pupil P2
 
-%load([mp.falcodir 'macos/IFopd/target_opd'],'opd_target','amp_target','maskopd')
-%load([mp.falcodir 'macos/IFopd/target_opd_1550nm_4if'],'opd_target','amp_target','maskopd')
-%load([mp.falcodir 'macos/IFopd/target_opd_amp_bb_30nm_bw20_355nm_flat'],'opd_target','amp_target','ce_target')
-%load([mp.falcodir 'macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_355nm'],'opd_target','amp_target','ce_target ')
-%load([mp.falcodir 'macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc'],'opd_target','amp_target','ce_target')
-%load([mp.falcodir 'macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc_no_ota'],'opd_target amp_target ce_target')
-load([mp.falcodir 'macos/IFhex_opd/target_opd_amp_gap08_opd1_27nm_bw20_1500nm_post_efc'],'opd_target','amp_target','ce_target')
+%load ~esidick/Afalco/falco20200916/macos/IFopd/target_opd opd_target amp_target maskopd
+%load ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_1550nm_4if opd_target amp_target maskopd
+%load ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_355nm_flat opd_target amp_target ce_target
+%load ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_355nm opd_target amp_target ce_target 
+%load ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc opd_target amp_target ce_target
+%load ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc_no_ota opd_target amp_target ce_target
+load ~esidick/Afalco/falco20200916/macos/IFhex_opd/target_opd_amp_gap08_opd1_27nm_bw20_1500nm_post_efc opd_target amp_target ce_target
 
 %opd_target = mp.wfc.opd_target;
 %amp_target = mp.wfc.amp_target;
@@ -195,19 +195,19 @@ for ii =  1:ma
 
     count_dm1_dm2 = [jj ii ma round(delt) round(tsum)]
 
-    %save('-v7.3,[mp.falcodir 'macos/IFopd/test'],'dw','da')
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/test dw da
 
 end
-    %save('-v7.3,[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_full'],'dwddm','daddm','indx','maskopd')
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_full dwddm daddm indx maskopd
 end
 
-    %save('-v7.3',[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_full'],'dwddm','daddm','indx','maskopd')
-    %save('-v7.3',[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_full_1550nm'],'dwddm','daddm','indx','maskopd')
-    %save('-v7.3',[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_full_355nm_30nm_bw20_flat'],'dwddm daddm','indx','maskopd')
-    %save('-v7.3',[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_355nm_30nm_bw20_gap08'],'dwddm','daddm','indx','maskopd')
-    %save('-v7.3',[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_1500nm_30nm_bw20_gap08'],'dwddm','daddm','indx','maskopd')
-    %save('-v7.3',[mp.falcodir 'macos/IFopd/dwddm_dm2_nm_over_nm_1500nm_30nm_bw20_gap08_no_ota'],'dwddm','daddm','indx','maskopd')
-    save('-v7.3',[mp.falcodir 'macos/IFhex_opd/dwddm_dm1_nm_over_nm_1500nm_opd1_27nm_bw20_gap08'],'dwddm','daddm','indx','maskopd')
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_full dwddm daddm indx maskopd
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_full_1550nm dwddm daddm indx maskopd
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_full_355nm_30nm_bw20_flat dwddm daddm indx maskopd
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_355nm_30nm_bw20_gap08 dwddm daddm indx maskopd
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_1500nm_30nm_bw20_gap08 dwddm daddm indx maskopd
+    %save -v7.3 ~esidick/Afalco/falco20200916/macos/IFopd/dwddm_dm2_nm_over_nm_1500nm_30nm_bw20_gap08_no_ota dwddm daddm indx maskopd
+    save -v7.3 ~esidick/Afalco/falco20200916/macos/IFhex_opd/dwddm_dm1_nm_over_nm_1500nm_opd1_27nm_bw20_gap08 dwddm daddm indx maskopd
 
 % ---------------------------------------------
 if 0
@@ -225,14 +225,14 @@ M = dwddm;
     
     dwddm1 = dwddm(:,km1);
 
-    %save([mp.falcodir 'macos/IFopd/dat_dwddm1_small'],'km1','dwddm1','indx','maskopd')
+    %save ~esidick/Afalco/falco20200916/macos/IFopd/dat_dwddm1_small km1 dwddm1 indx maskopd
 end
 % ======================================================================
 
 %save /home/esidick/2023_6mst/macos/dat/falco_efield_ep3 EP3
-%save([mp.falcodir 'macos/dat/dat_ep3_field_no_dm'],'EP3')
-%save([mp.falcodir 'macos/dat/dat_ep3_field_with_dm_v2'],'EP3')
-%save([mp.falcodir 'macos/dat/dat_ep3_field_no_error'],'EP3')
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_no_dm EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_with_dm_v2 EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_no_error EP3
 % ======================================================================
 
 %--Apply the apodizer mask (if there is one)
@@ -271,8 +271,8 @@ switch upper(mp.coro)
         ps = size(EP3)
         ps1 = size(EP4)
         %}
-        %save([mp.falcodir 'macos/dat/dat_ep3_field'],'EP3')
-        %save([mp.falcodir 'dat_bb_wfc10_psd/dat_ep3_field_psd_lamo100_7lam'],'EP3')
+        %save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field EP3
+        %save ~esidick/Afalco/falco20200916/dat_bb_wfc10_psd/dat_ep3_field_psd_lamo100_7lam EP3
         %disp('paused inside model_full_Fourier'), %pause(1)
         
 

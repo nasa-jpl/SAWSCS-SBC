@@ -43,7 +43,7 @@
 % Modified on 2015-02-18 by A.J. Riggs from hcil_model.m to hcil_simTestbed.m to include
 %  extra errors in the model to simulate the actual testbed for fake images.
 
-function [Eout, varargout] = model_full_Fourier_target_opd_amp(mp, lambda, Ein, normFac)
+function [Eout, varargout] = model_full_Fourier_dm1_wfc(mp, lambda, Ein, normFac)
 
 mirrorFac = 2; % Phase change is twice the DM surface height.
 NdmPad = mp.full.NdmPad;
@@ -64,15 +64,9 @@ if(isfield(mp,'full'))
         if(isfield(mp.full.dm2,'V0'));  mp.dm2.V = mp.dm2.V + mp.full.dm2.V0;  end % Add some extra starting command to the voltages  [volts]
     end
 end
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Masks and DM surfaces
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-np   = 512/2;
-
-maskopd = abs(pad(mp.P1.full.mask,np)) > 0;
-
-% ---------------------------------------
 
 if(any(mp.dm_ind==1));  DM1surf = falco_gen_dm_surf(mp.dm1,mp.dm1.dx,NdmPad); end
 if(any(mp.dm_ind==2));  DM2surf = falco_gen_dm_surf(mp.dm2,mp.dm2.dx,NdmPad); else; DM2surf=zeros(NdmPad); end
@@ -120,62 +114,151 @@ if( mp.d_P2_dm1 + mp.d_dm1_dm2 == 0 ); EP2eff = Edm2; else; EP2eff = propcustom_
 %--Re-image to pupil P3
 EP3 = propcustom_relay(EP2eff,mp.Nrelay2to3,mp.centering);
 
-%if lambda == 500e-9
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WFC
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %load ~esidick/Afalco/falco20200916/macos/IFopd/dat_dwddm1_small km1 dwddm1 indx maskopd
+    load ~esidick/Afalco/falco20200916/macos/IFopd/dm1_opdtarget dm1 opd_target
+
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Masks and DM surfaces
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if(any(mp.dm_ind==1));  DM1surf = falco_gen_dm_surf(mp.dm1,mp.dm1.dx,NdmPad); end
+if(any(mp.dm_ind==2));  DM2surf = falco_gen_dm_surf(mp.dm2,mp.dm2.dx,NdmPad); else; DM2surf=zeros(NdmPad); end
+
+pupil = padOrCropEven(mp.P1.full.mask,NdmPad);
+Ein = padOrCropEven(Ein,NdmPad);
+
+if(mp.useGPU)
+    pupil = gpuArray(pupil);
+    Ein = gpuArray(Ein);
+    if(any(mp.dm_ind==1)); DM1surf = gpuArray(DM1surf); end
+    if(any(mp.dm_ind==2)); DM2surf = gpuArray(DM2surf); end
+end
+
+if(mp.flagDM1stop); DM1stop = padOrCropEven(mp.dm1.full.mask, NdmPad); else; DM1stop = 1; end
+if(mp.flagDM2stop); DM2stop = padOrCropEven(mp.dm2.full.mask, NdmPad); else; DM2stop = 1; end
+
+if(mp.flagDMwfe)
+    if(any(mp.dm_ind==1));  Edm1WFE = exp(2*pi*1i/lambda.*padOrCropEven(mp.dm1.wfe,NdmPad,'extrapval',0)); else; Edm1WFE = ones(NdmPad); end
+    if(any(mp.dm_ind==2));  Edm2WFE = exp(2*pi*1i/lambda.*padOrCropEven(mp.dm2.wfe,NdmPad,'extrapval',0)); else; Edm2WFE = ones(NdmPad); end
+else
+    Edm1WFE = ones(NdmPad);
+    Edm2WFE = ones(NdmPad);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Propagation: entrance pupil, 2 DMs, (optional) apodizer, vortex FPM, LS, and final focal plane
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%--Define pupil P1 and Propagate to pupil P2
+EP1 = pupil.*Ein; %--E-field at pupil plane P1
+EP2 = propcustom_relay(EP1,mp.Nrelay1to2,mp.centering); %--Forward propagate to the next pupil plane (P2) by rotating 180 degrees mp.Nrelay1to2 times.
+
+%--Propagate from P2 to DM1, and apply DM1 surface and aperture stop
+if( abs(mp.d_P2_dm1)~=0 ); Edm1 = propcustom_PTP(EP2,mp.P2.full.dx*NdmPad,lambda,mp.d_P2_dm1); else; Edm1 = EP2; end  %--E-field arriving at DM1
+Edm1_save = Edm1;
+
+    %load ~esidick/Afalco/falco20200916/macos/IFopd/dat_dwddm1_small km1 dwddm1 indx maskopd
+    %load ~esidick/Afalco/falco20200916/macos/IFopd/dm1_opdtarget dm1 opd_target
+
+    np = 512;
+    indx = mp.wfc.indx;
 
     ce = pad(EP3,np);
-    %ce = EP3; maskopd = 1;
-    opd_target = maskopd .* (1e9 * atan2(imag(ce),real(ce)) * lambda / 2 / pi);
-    amp_target = abs(ce) .* maskopd;
-    ce_target = ce;
+    pha_nm = 1e9 * atan2(imag(ce),real(ce)) * lambda / 2 / pi;
+    %opd = pha_nm .* maskopd - opd_target;
+    opd = pha_nm - opd_target;
 
-    idd = 'pre'
+    dw = m2v(opd, indx);
 
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/paper_opd_amp opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gray_gap08_wfe00_bw00_500nm opd_target amp_target ce_target 
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/pre_efc_flat_opd_amp_gray_gap08_wfe30_1lam_1500nm opd_target amp_target ce_target
+    % ---------------------------------
 
-%end    
+    ddu =  -mp.wfc.G * dw;
 
-    %opd_nm_distorted = opd_target; 
-    %amp_distorted    = amp_target;
-    %ce_distorted = ce;
+    ma = mp.dm1.Nact;
+    ma2 = ma * ma;
 
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm_1064nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm_1550nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_case6_30nm_500nm_distorted opd_nm_distorted amp_distorted
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_1550nm_4if opd_target amp_target maskopd
+        du1 = zeros(ma2,1);
+        du1(mp.wfc.km1) = ddu;
 
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw05_1064nm opd_target amp_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_355nm_flat opd_target amp_target
-    %save
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_500nm_post_efc opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_bb_30nm_bw20_355nm_flat opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/distorted_opd_amp_bb_30nm_bw20_355nm_flat opd_nm_distorted amp_distorted ce_distorted
-    
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/target_opd_amp_bb_00nm_bw20_500nm_fac0p5_gray24 opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/target_opd_amp_bb_00nm_bw20_1500nm_gray08_opd_owa20 opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/maps_psd/post_efc_opd_amp_30nm_bw20_1500nm_gray08_owa12_big opd_target amp_target ce_target
-    %load ~esidick/Afalco/falco20200916/macos/maps_psd/post_efc_opd_amp_30nm_bw20_500nm_gray08_owa12_big opd_target amp_target ce_target
+        del_dm1 = reshape(du1, ma, ma);
+        del_dm1 = del_dm1';
 
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_355nm opd_target amp_target ce_target
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_500nm_post_efc opd_target amp_target ce_target
-    amp = amp_target;
-    opd = opd_target;
-    cef = ce_target;
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_500nm_post_efc_dm_drift_1000pm opd amp cef
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc_no_ota opd amp cef
-    %save ~esidick/Afalco/falco20200916/macos/IFopd/target_opd_amp_gap08_bb_30nm_bw20_1500nm_post_efc_no_ota opd_target amp_target ce_target
-    save ~esidick/Afalco/falco20200916/macos/IFhex_opd/target_opd_amp_gap08_opd1_27nm_bw20_1500nm_post_efc opd_target amp_target ce_target
+    dm1 = dm1 + del_dm1;
+    mp.dm1.V = dm1;
 
-    %pha = opd_target * 2 * pi * 1e-9/ lambda;
-    %EP3 = amp_target .* exp(1i*pha);
+    %save ~esidick/Afalco/falco20200916/macos/IFopd/dm1_opdtarget dm1 opd_target
 
-    %aa = opd_target; rms0 = stat2d(aa); cx = rms0(1)*3*[-1 1];
-    %figure(13), clf
-        %imagesc(aa,cx); axis xy image, colormap(jet);  colorbar
-        %title(sprintf('target-opd-355: rms = %0.2f, pv = %0.1fnm', rms0));
-   %print -dpng ~esidick/Afalco/falco20200916/Figs/fig_opd1
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Masks and DM surfaces
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+if(any(mp.dm_ind==1));  DM1surf = falco_gen_dm_surf(mp.dm1,mp.dm1.dx,NdmPad); end
+if(any(mp.dm_ind==2));  DM2surf = falco_gen_dm_surf(mp.dm2,mp.dm2.dx,NdmPad); else; DM2surf=zeros(NdmPad); end
+
+pupil = padOrCropEven(mp.P1.full.mask,NdmPad);
+Ein = padOrCropEven(Ein,NdmPad);
+
+if(mp.useGPU)
+    pupil = gpuArray(pupil);
+    Ein = gpuArray(Ein);
+    if(any(mp.dm_ind==1)); DM1surf = gpuArray(DM1surf); end
+    if(any(mp.dm_ind==2)); DM2surf = gpuArray(DM2surf); end
+end
+
+if(mp.flagDM1stop); DM1stop = padOrCropEven(mp.dm1.full.mask, NdmPad); else; DM1stop = 1; end
+if(mp.flagDM2stop); DM2stop = padOrCropEven(mp.dm2.full.mask, NdmPad); else; DM2stop = 1; end
+
+if(mp.flagDMwfe)
+    if(any(mp.dm_ind==1));  Edm1WFE = exp(2*pi*1i/lambda.*padOrCropEven(mp.dm1.wfe,NdmPad,'extrapval',0)); else; Edm1WFE = ones(NdmPad); end
+    if(any(mp.dm_ind==2));  Edm2WFE = exp(2*pi*1i/lambda.*padOrCropEven(mp.dm2.wfe,NdmPad,'extrapval',0)); else; Edm2WFE = ones(NdmPad); end
+else
+    Edm1WFE = ones(NdmPad);
+    Edm2WFE = ones(NdmPad);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Propagation: entrance pupil, 2 DMs, (optional) apodizer, vortex FPM, LS, and final focal plane
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%--Define pupil P1 and Propagate to pupil P2
+EP1 = pupil.*Ein; %--E-field at pupil plane P1
+EP2 = propcustom_relay(EP1,mp.Nrelay1to2,mp.centering); %--Forward propagate to the next pupil plane (P2) by rotating 180 degrees mp.Nrelay1to2 times.
+
+%--Propagate from P2 to DM1, and apply DM1 surface and aperture stop
+if( abs(mp.d_P2_dm1)~=0 ); Edm1 = propcustom_PTP(EP2,mp.P2.full.dx*NdmPad,lambda,mp.d_P2_dm1); else; Edm1 = EP2; end  %--E-field arriving at DM1
+Edm1 = Edm1WFE.*DM1stop.*exp(mirrorFac*2*pi*1i*DM1surf/lambda).*Edm1; %--E-field leaving DM1
+
+%--Propagate from DM1 to DM2, and apply DM2 surface and aperture stop
+Edm2 = propcustom_PTP(Edm1,mp.P2.full.dx*NdmPad,lambda,mp.d_dm1_dm2); 
+Edm2 = Edm2WFE.*DM2stop.*exp(mirrorFac*2*pi*1i*DM2surf/lambda).*Edm2;
+
+%--Back-propagate to pupil P2
+if( mp.d_P2_dm1 + mp.d_dm1_dm2 == 0 ); EP2eff = Edm2; else; EP2eff = propcustom_PTP(Edm2,mp.P2.full.dx*NdmPad,lambda,-1*(mp.d_dm1_dm2 + mp.d_P2_dm1)); end %--Back propagate to pupil P2
+
+%--Re-image to pupil P3
+EP3 = propcustom_relay(EP2eff,mp.Nrelay2to3,mp.centering);
+
+    ce = pad(EP3,np);
+    pha_nm = 1e9 * atan2(imag(ce),real(ce)) * lambda / 2 / pi;
+    opd = pha_nm .* mp.wfc.maskopd - opd_target;
+
+    save ~esidick/Afalco/falco20200916/macos/IFopd/dat_post_wfc_opd opd dm1
+
+% ======================================================================
+
+%save /home/esidick/2023_6mst/macos/dat/falco_efield_ep3 EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_no_dm EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_with_dm_v2 EP3
+%save ~esidick/Afalco/falco20200916/macos/dat/dat_ep3_field_no_error EP3
+% ======================================================================
 
 %--Apply the apodizer mask (if there is one)
 if(mp.flagApod)
