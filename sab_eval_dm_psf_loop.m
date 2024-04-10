@@ -7,7 +7,7 @@
 model_mode = 'eval';
 pr2_hex_vvc
 
-ifPlot = 0; ifPrint = 0; ifSave = 1; ifSavePSF = 1;
+ifPlot = 0; ifPrint = 0; ifSave = 1; ifSavePSF = 0;
 
 load([falcodir 'macos/hex_dat1/efc3_trial3_opd1_gap8_256pix_bw20_27nm_2to12lamD_chg6_4lam_itr410'],'dm1','dm2','tx','cbx','fom','Im','bvalo')
 dm1_save = dm1;
@@ -38,7 +38,7 @@ tightenAxis = abs(xv) <= 12;  xvt = xv(tightenAxis);
 idd = 3000
 
 %load hex_maps/trial3_opd1_final opdx %SAB2024
-trial_name = 'trial8'; trial = read_trial(trial_name);
+trial_name = 'trial13'; trial = read_trial(trial_name);
 
 nt = size(trial,2);
 ns = size(trial(1).delta,2);
@@ -47,10 +47,16 @@ wfxrb = zeros(ns, nt); dwfxrb = zeros(ns, nt); wfxi = zeros(ns, nt); dwfxi = zer
 offset = 0;
 if ifSavePSF, offset = 5; end
 clear errFac cbrbmean cbimean cbomean wfrbmean dwfrbmean wfimean dwfimean psfrbtot psfitot psfotot
+before_met = 0; before_met_str = 'dopd_drift'; after_met = 0; after_met_str = 'dopd_final';
 for jj = 1+offset:nt %6 %1:nt
   delta_opd = trial(jj).delta; % relevant variable name is trial3.delta(1:10).dopd_drift and .dopd_final
-  errFac(jj) = trial(jj).errFac;
-  ns = size(delta_opd,2);
+  if isfield(trial(1).delta,  after_met_str),  after_met = 1; end
+  if isfield(trial(1).delta, before_met_str), before_met = 1; end
+  if isfield(trial(jj),'errFac')
+    errFac(jj) = trial(jj).errFac;
+  elseif isfield(trial(jj),'sig_dz')
+    errFac(jj) = trial(jj).sig_dz;
+  end
 
   flag_movie = 0;
   if flag_movie
@@ -60,62 +66,66 @@ for jj = 1+offset:nt %6 %1:nt
   end
 
   for ii = 1:ns %7 %1:ns
-    % Compute pre-WFC Contrast
-    opdrb = 1e3*zernike_remove(delta_opd(ii).dopd_drift,[1:3]);
-    opdnm = opdnm0 + pad(opdrb,length(pupil));
-    wfxrb(ii,jj) = rms2(nonzeros(opdnm));
-    dwfxrb(ii,jj) = rms2(nonzeros(opdrb));
-    pupil = pupil_save .* exp(1i*2*pi*opdnm*1e-9/mp.lambda0);
+    if before_met
+      % Compute pre-WFC Contrast
+      opdrb = 1e3*zernike_remove(delta_opd(ii).dopd_drift,[1:3]);
+      opdnm = opdnm0 + pad(opdrb,length(pupil));
+      wfxrb(ii,jj) = rms2(nonzeros(opdnm));
+      dwfxrb(ii,jj) = rms2(nonzeros(opdrb));
+      pupil = pupil_save .* exp(1i*2*pi*opdnm*1e-9/mp.lambda0);
 
-    if ifPlot, smallerLim = min(max(opdrb(:)), -min(opdrb(:))); clim2 = [-smallerLim smallerLim];
+      if ifPlot, smallerLim = min(max(opdrb(:)), -min(opdrb(:))); clim2 = [-smallerLim smallerLim];
         figure(11),show_opd(opdrb,sprintf('Drift WFE, ErrFac = %d',errFac(jj)),'nm',clim2)
         if ifPrint,print('-dpng',sprintf('../Figs/DriftWFE%0.2i',ii)), end, end
-    mp.P1.compact.mask = pupil; %(load your file here)
-    mp.P1.full.mask    = pupil; %(load your file here)
+      mp.P1.compact.mask = pupil; %(load your file here)
+      mp.P1.full.mask    = pupil; %(load your file here)
 
-    mp.dm1.V = dm1_save;
-    mp.dm2.V = dm2_save;
+      mp.dm1.V = dm1_save;
+      mp.dm2.V = dm2_save;
 
-% *******************************
-    flag = 1
-    mp.wfc.model_id = flag; % =1 stantard, =2 dm1_opd, =3 dm2_opd/amp, =4 dm1_wfc, 5 = dm2_wfc, 6 = dm1_dm2_wfc, 7 = target_opd_amp, 8 = target_amp_opd_eval
-% *******************************
-    Im = falco_get_summed_image(mp);
-    psfrb = Im .* maskc;
-    if ifSavePSF, psfrbtot(:,:,ii,jj-offset) = psfrb; end
-    cbrb = mean(nonzeros(psfrb(:)))
-    cbxrb(ii,jj) = cbrb;
+      % *******************************
+      flag = 1
+      mp.wfc.model_id = flag; % =1 stantard, =2 dm1_opd, =3 dm2_opd/amp, =4 dm1_wfc, 5 = dm2_wfc, 6 = dm1_dm2_wfc, 7 = target_opd_amp, 8 = target_amp_opd_eval
+      % *******************************
+      Im = falco_get_summed_image(mp);
+      psfrb = Im .* maskc;
+      if ifSavePSF, psfrbtot(:,:,ii,jj-offset) = psfrb; end
+      cbrb = mean(nonzeros(psfrb(:)))
+      cbxrb(ii,jj) = cbrb;
 
-    if ifPlot, figure(1), clf % SAB We added these lines because having trouble using sub_plot_rb_psf
+      if ifPlot, figure(1), clf % SAB We added these lines because having trouble using sub_plot_rb_psf
 	clim = [-11.4 -6];
 	imagesc(xvt,xvt,log10(pad(psfrb,sum(tightenAxis))),clim); axis xy image, colormap(jet); colorbar
         title([sprintf('pre-wfc NI(%0.2i): Cb = %0.3g',  ii, cbrb) ]), drawnow
         if ifPrint, print('-dpng',sprintf('../Figs/preNI%0.2i',ii)), end
-    end
+      end
+    end % if before_met
 % ===========================================================================================================
-    % Compute post-wfc Contrast
-    opdcor = 1e3*zernike_remove(delta_opd(ii).dopd_final,[1:3]);
-    opdnm = opdnm0 + pad(opdcor,length(pupil));
-    wfxi(ii,jj) = rms2(nonzeros(opdnm));
-    dwfxi(ii,jj) = rms2(nonzeros(opdcor));
-    pupil = pupil_save .* exp(1i*2*pi*opdnm*1e-9/mp.lambda0);
+    if after_met
+      % Compute post-wfc Contrast
+      opdcor = 1e3*zernike_remove(delta_opd(ii).dopd_final,[1:3]);
+      opdnm = opdnm0 + pad(opdcor,length(pupil));
+      wfxi(ii,jj) = rms2(nonzeros(opdnm));
+      dwfxi(ii,jj) = rms2(nonzeros(opdcor));
+      pupil = pupil_save .* exp(1i*2*pi*opdnm*1e-9/mp.lambda0);
 
-    if ifPlot, figure(12),show_opd(opdcor,sprintf('Metrology-corrected WFE, ErrFac = %d',errFac(jj)),'nm',clim2)
+      if ifPlot, figure(12),show_opd(opdcor,sprintf('Metrology-corrected WFE, ErrFac = %d',errFac(jj)),'nm',clim2)
         if ifPrint,print('-dpng',sprintf('../Figs/MetCorWFE%0.2i',ii)), end, end
-    mp.P1.compact.mask = pupil; %(load your file here)
-    mp.P1.full.mask    = pupil; %(load your file here)
+      mp.P1.compact.mask = pupil; %(load your file here)
+      mp.P1.full.mask    = pupil; %(load your file here)
 
-    Im = falco_get_summed_image(mp);
-    psfi = Im .* maskc; 
-    if ifSavePSF, psfitot(:,:,ii,jj) = psfi; end
-    cbi = mean(nonzeros(psfi(:)))
-    cbxi(ii,jj) = cbi;
+      Im = falco_get_summed_image(mp);
+      psfi = Im .* maskc; 
+      if ifSavePSF, psfitot(:,:,ii,jj) = psfi; end
+      cbi = mean(nonzeros(psfi(:)))
+      cbxi(ii,jj) = cbi;
 
-    if ifPlot, figure(2), clf % SAB We added these lines because having trouble using sub_plot_rb_psf
+      if ifPlot, figure(2), clf % SAB We added these lines because having trouble using sub_plot_rb_psf
         imagesc(xvt,xvt,log10(pad(psfi,sum(tightenAxis))),clim); axis xy image, colormap(jet); colorbar
         title([sprintf('post-wfc NI(%0.2i): Cb = %0.3g',  ii, cbi) ]), drawnow
 	if ifPrint, print('-dpng',sprintf('../Figs/postNI%0.2i',ii)), end
-    end
+      end
+    end % if after_met
 % ===========================================================================================================
     % -------------------------------------------------
     mp.wfc.fn = sprintf('%smacos/IFhex_opd/wfc_dm1_dm2_gap08_30nm_bw20_1500nm_%s_case%i_%0.2i', ...
