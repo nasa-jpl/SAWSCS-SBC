@@ -40,14 +40,24 @@ if ~exist('G')
 end
 
 % Load pre-calculated OPDs from Redding
-trial_name = 'trial8'; trial = read_trial(trial_name); % possible options for trial_name: trial4, trial6
+trial_name = 'trial13'; trial = read_trial(trial_name); % possible options for trial_name: trial4, trial6
 for jj = 1:size(trial,2)
-  delta_opd = trial(jj).delta; % relevant variable name is trial3.delta(1:10).dopd_drift and .dopd_final
-  ns = size(delta_opd,2);
+  ns = size(trial(jj).delta,2);
+  if isfield(trial(1).delta,'dopd_final')
+    field_of_int = 'dopd_final';
+  elseif isfield(trial(1).delta,'dopd_drift')
+    field_of_int = 'dopd_drift';
+  else
+    error('field of interest does not exist')
+  end
+  for ii = 1:ns
+    eval(sprintf('opd_of_int(:,:,ii) = trial(jj).delta(ii).%s;', field_of_int))
+  end
+  %delta_opd = trial(jj).delta; % relevant variable name is trial3.delta(1:10).dopd_drift and .dopd_final
+  %ns = size(delta_opd,2);
 
   for ii = 1:ns
-
-    opdnm = opdnm0 + pad(zernike_remove(1e3*delta_opd(ii).dopd_final,[1:3]),length(pupil));
+    opdnm = opdnm0 + pad(zernike_remove(1e3*opd_of_int(:,:,ii),[1:3]),length(pupil));
     figure(3),show_opd(opdnm,sprintf('OPD drift case %0.2d',ii),'nm'),drawnow
 
     pupil = pupil_save .* exp(1i*2*pi*opdnm*1e-9/mp.lambda0);
