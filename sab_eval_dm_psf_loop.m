@@ -38,7 +38,7 @@ tightenAxis = abs(xv) <= 12;  xvt = xv(tightenAxis);
 idd = 3000
 
 %load hex_maps/trial3_opd1_final opdx %SAB2024
-trial_name = 'trial13'; trial = read_trial(trial_name);
+trial_name = 'trial13'; trial = read_trial(mp, trial_name);
 
 nt = size(trial,2);
 ns = size(trial(1).delta,2);
@@ -48,7 +48,7 @@ offset = 0;
 if ifSavePSF, offset = 5; end
 clear errFac cbrbmean cbimean cbomean wfrbmean dwfrbmean wfimean dwfimean psfrbtot psfitot psfotot
 before_met = 0; before_met_str = 'dopd_drift'; after_met = 0; after_met_str = 'dopd_final';
-for jj = 1+offset:nt %6 %1:nt
+for jj = 1+offset:nt
   delta_opd = trial(jj).delta; % relevant variable name is trial3.delta(1:10).dopd_drift and .dopd_final
   if isfield(trial(1).delta,  after_met_str),  after_met = 1; end
   if isfield(trial(1).delta, before_met_str), before_met = 1; end
@@ -65,7 +65,7 @@ for jj = 1+offset:nt %6 %1:nt
       open(video); %open the file for writing
   end
 
-  for ii = 1:ns %7 %1:ns
+  for ii = 1:ns
     if before_met
       % Compute pre-WFC Contrast
       opdrb = 1e3*zernike_remove(delta_opd(ii).dopd_drift,[1:3]);
@@ -189,11 +189,12 @@ legend('Drift WFE','Metrology-corrected WFE','pre-wfc C_b','post-wfc C_b','dm1 +
 
 if ifSave
   if ifSavePSF
-    save(sprintf('IFhex_opd/%s_contrast_psf',trial_name),'nt','ns','errFac','cbxrb','cbxi','cbxo','cbrbmean','cbimean', ...
-        'cbomean','wfxrb','dwfxrb','wfxi','dwfxi','wfrbmean','dwfrbmean','wfimean','dwfimean','opdnm0', ...
-	'psfrbtot','psfitot','psfotot')
+    save(sprintf('%s/macos/IFhex_opd/%s_contrast_psf',mp.falcodir,trial_name),'nt','ns','errFac','cbxrb','cbxi', ...
+	'cbxo','cbrbmean','cbimean','cbomean','wfxrb','dwfxrb','wfxi','dwfxi','wfrbmean','dwfrbmean','wfimean', ...
+        'dwfimean','opdnm0','psfrbtot','psfitot','psfotot')
   else
-    save(sprintf('IFhex_opd/%s_contrast',trial_name),'nt','ns','errFac','cbxrb','cbxi','cbxo','cbrbmean','cbimean', ...
-	'cbomean','wfxrb','dwfxrb','wfxi','dwfxi','wfrbmean','dwfrbmean','wfimean','dwfimean','opdnm0')
+    save(sprintf('%s/macos/IFhex_opd/%s_contrast',mp.falcodir,trial_name),'nt','ns','errFac','cbxrb','cbxi', ...
+	'cbxo','cbrbmean','cbimean','cbomean','wfxrb','dwfxrb','wfxi','dwfxi','wfrbmean','dwfrbmean', ...
+	'wfimean','dwfimean','opdnm0')
   end
 end

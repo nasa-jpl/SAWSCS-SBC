@@ -149,7 +149,7 @@ if 1
     %load IFopd/G_dm1_dm2_lim3_m3_355nm_30nm_bw20_gap08 G km1 km2 indx
     %load IFopd/G_dm1_lim3_m2_1500nm_30nm_bw20_gap08 G km1 km2 indx
     %load IFopd/G_dm1_dm2_lim3_m3_1500nm_30nm_bw20_gap08_no_ota G km1 km2 indx
-    load IFhex_opd/G_dm1_dm2_lim1e3_m2_1500nm_30nm_bw20_gap08 G km1 km2 indx
+    load([falcodir 'macos/IFhex_opd/G_dm1_dm2_lim1e3_m2_1500nm_30nm_bw20_gap08'],'G','km1','km2','indx')
 
 %else
 

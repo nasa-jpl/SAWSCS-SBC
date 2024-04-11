@@ -18,7 +18,7 @@ load([falcodir 'macos/IFhex_opd/target_opd_amp_gap08_opd1_27nm_bw20_1500nm_post_
 
 pupil_save = fitsread([falcodir 'macos/hex_maps/pupil_8mm_gap_8pix_256_matched.fits']);
 
-load hex_maps/dat_dave_trial3_opdnm_3d opdnm_3d
+load([falcodir 'macos/hex_maps/dat_dave_trial3_opdnm_3d'],'opdnm_3d')
 opdnm0 = opdnm_3d(:,:,1);
 
 pupil = pupil_save .* exp(1i*2*pi*opdnm0*1e-9/mp.lambda0);
@@ -32,7 +32,7 @@ rm = abs(xm + 1i * ym);
 maskc = (rm > 2) & (rm <= 12);
 
 if ~exist('G')
-    load IFhex_opd/G_dm1_dm2_lim1e3_m2_1500nm_30nm_bw20_gap08 G km1 km2 indx
+    load([falcodir 'macos/IFhex_opd/G_dm1_dm2_lim1e3_m2_1500nm_30nm_bw20_gap08'],'G','km1','km2','indx')
     mp.wfc.indx = indx;
     mp.wfc.km1  = km1;
     mp.wfc.km2  = km2;
@@ -40,7 +40,7 @@ if ~exist('G')
 end
 
 % Load pre-calculated OPDs from Redding
-trial_name = 'trial13'; trial = read_trial(trial_name); % possible options for trial_name: trial4, trial6
+trial_name = 'trial13'; trial = read_trial(mp, trial_name); % possible options for trial_name: trial4, trial6
 for jj = 1:size(trial,2)
   ns = size(trial(jj).delta,2);
   if isfield(trial(1).delta,'dopd_final')

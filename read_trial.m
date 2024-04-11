@@ -4,31 +4,31 @@
 % at the California Institute of Technology.
 % -------------------------------------------------------------------------
 
-function [trial] = read_trial(trial_name)
+function [trial] = read_trial(mp, trial_name)
 
 ifPlot = 0;
 
 switch trial_name
     case 'trial4'
-        load hex_maps/trial4
+        load([mp.falcodir 'macos/hex_maps/trial4'])
         trial = trial3;
     case 'trial6'
-        load hex_maps/trial6
+        load([mp.falcodir 'macos/hex_maps/trial6'])
     case 'trial7'
-	load hex_maps/trial7
+	load([mp.falcodir 'macos/hex_maps/trial7'])
     case 'trial8'
-	load hex_maps/trial8
+	load([mp.falcodir 'macos/hex_maps/trial8'])
 	trial = trial(1:8);
     case 'trial9'
-	load hex_maps/trial9
+	load([mp.falcodir 'macos/hex_maps/trial9'])
     case 'trial10'
-	load hex_maps/trial10
+	load([mp.falcodir 'macos/hex_maps/trial10'])
     case 'trial11'
-        load hex_maps/trial11
+        load([mp.falcodir 'macos/hex_maps/trial11'])
     case 'trial12'
-        load hex_maps/trial12
+        load([mp.falcodir 'macos/hex_maps/trial12'])
     case 'trial13'
-        load hex_maps/trial13
+        load([mp.falcodir 'macos/hex_maps/trial13'])
 
 end
 
