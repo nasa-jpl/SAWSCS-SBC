@@ -4,6 +4,7 @@ SAB re-architected ES's code to streamline how it is used to:
 Both of these functions call pr2_hex_vvc.m to set up the model and the wavelegths they use.
 
 pr2_hex_vvc.m used to be the main script that could do everything, including digging a dark hole.
+It appears to have been started from falco-matlab/main/EXAMPLE_main_LUVOIRB_DMVC_design.m
 It is 1000 lines long and has a lot of "if 0" and "return" spread throughtout it,
 so it is not meant to be run end-to-end.  However, it also sets
 up the coronagraph model for both in- and out-of-band computations and is still used for this purpose (by SAB).
